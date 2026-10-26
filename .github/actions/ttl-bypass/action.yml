@@ -1,0 +1,37 @@
+name: 'Apply Kernel TTL / Hop-Limit Hotspot Bypass Patch'
+description: 'Automatically clamp forwarded IPv4 TTL and IPv6 Hop Limit to 64 for transparent tethering/hotspot bypass'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Patch Kernel IPv4 & IPv6 Forwarding TTL
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        set -euo pipefail
+        echo "Applying in-kernel TTL / Hop Limit bypass patch..."
+
+        # Patch IPv4 TTL in ip_forward.c
+        FOUND_V4=false
+        for f in common/net/ipv4/ip_forward.c net/ipv4/ip_forward.c; do
+          if [ -f "$f" ]; then
+            grep -q '<net/checksum.h>' "$f" || sed -i '1i #include <net/checksum.h>' "$f"
+            sed -i 's/if (ip_decrease_ttl(iph)) {/if (iph->ttl != 64) { csum_replace2(\&iph->check, htons(iph->ttl << 8), htons(64 << 8)); iph->ttl = 64; } if (false) {/' "$f"
+            echo "Successfully patched IPv4 TTL clamp to 64 in $f"
+            FOUND_V4=true
+          fi
+        done
+
+        # Patch IPv6 Hop Limit in ip6_output.c
+        FOUND_V6=false
+        for f in common/net/ipv6/ip6_output.c net/ipv6/ip6_output.c; do
+          if [ -f "$f" ]; then
+            sed -i 's/hdr->hop_limit--;/hdr->hop_limit = 64;/' "$f"
+            echo "Successfully patched IPv6 Hop Limit clamp to 64 in $f"
+            FOUND_V6=true
+          fi
+        done
+
+        if [ "$FOUND_V4" = "false" ] || [ "$FOUND_V6" = "false" ]; then
+          echo "Notice: checked common/net/ and net/ paths."
+        fi

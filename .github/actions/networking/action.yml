@@ -1,5 +1,5 @@
 name: 'Setup Networking'
-description: 'Set up all networking options (IP Set, TCP CC, Qdisc, BBRv3, CIFS, Wireguard)'
+description: 'Set up all networking options (IP Set, TCP CC, Qdisc, BBRv3, CIFS, Wireguard, TTL Hotspot Bypass)'
 inputs:
   version:
     description: 'Kernel config version (e.g., android15-6.6)'
@@ -19,6 +19,9 @@ runs:
   steps:
     - name: Setup Networking Configs
       uses: ./.github/actions/networking-config
+
+    - name: Apply TTL Hotspot Bypass Patch
+      uses: ./.github/actions/ttl-bypass
 
     - name: Apply BBRv3 Patches
       uses: ./.github/actions/bbrv3

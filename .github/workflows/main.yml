@@ -92,7 +92,7 @@ on:
         type: boolean
         default: true
       use_net:
-        description: "Networking"
+        description: "Networking (BBRv3, WireGuard, TTL/Hotspot Bypass)"
         type: boolean
         default: true
       use_ds:
