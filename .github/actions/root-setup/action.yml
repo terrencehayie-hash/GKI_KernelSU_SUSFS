@@ -194,3 +194,8 @@ runs:
           sed -i '/depends on m/d' YukiSU/kernel/Kconfig
           echo "Stripped 'depends on m' from YukiSU/kernel/Kconfig for GKI built-in compatibility."
         fi
+        # Guard THIS_MODULE against NULL pointer dereference in built-in mode (=y)
+        if [ -f "YukiSU/kernel/core/init.c" ]; then
+          sed -i 's/kobject_del(&THIS_MODULE->mkobj.kobj);/if (THIS_MODULE) kobject_del(\&THIS_MODULE->mkobj.kobj);/' YukiSU/kernel/core/init.c
+          echo "Guarded THIS_MODULE kobject_del in YukiSU/kernel/core/init.c for built-in compatibility."
+        fi
