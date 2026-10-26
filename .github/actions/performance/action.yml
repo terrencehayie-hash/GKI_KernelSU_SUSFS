@@ -1,5 +1,5 @@
-name: 'Apply Performance Patches'
-description: 'Apply experimental kernel patches with version-specific logic'
+name: 'Apply Performance Patches & Configs'
+description: 'Apply experimental performance kernel patches and config options (ZRAM ZSTD, Kyber I/O)'
 inputs:
   kernel_version:
     description: 'Kernel version (e.g., 6.1)'
@@ -71,3 +71,15 @@ runs:
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/silence_system_logspam.patch"
 
         echo "[+] Other patches applied"
+
+    - name: Enable Performance Kernel Configs
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_CRYPTO_ZSTD=y
+          CONFIG_ZSTD_COMPRESS=y
+          CONFIG_ZSTD_DECOMPRESS=y
+          CONFIG_ZRAM_DEF_COMP_ZSTD=y
+          CONFIG_ZRAM_DEF_COMP="zstd"
+          CONFIG_ZRAM_WRITEBACK=y
+          CONFIG_MQ_IOSCHED_KYBER=y

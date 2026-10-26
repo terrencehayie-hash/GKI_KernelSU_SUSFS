@@ -116,9 +116,9 @@ on:
         type: boolean
         default: true
       use_perf:
-        description: "Performance"
+        description: "Performance (ARM64 mem/cache patches, ZRAM ZSTD, Kyber I/O)"
         type: boolean
-        default: false
+        default: true
       test_release_notes:
         description: "Render release notes preview only (skip all builds + release)"
         type: boolean
@@ -651,12 +651,11 @@ jobs:
 
           # Scheduled (nightly) runs carry NO inputs - the use_* booleans are
           # empty strings, not true - so read them with schedule defaults:
-          # every feature ON (matching the dispatch defaults) except Perf,
-          # which is opt-in on dispatch and stays off for nightlies.
+          # every feature ON (matching the dispatch defaults).
           if [ "${{ github.event_name }}" = "schedule" ]; then
             F_SUSFS=true;  F_NOMOUNT=true; F_BBG=true;  F_NET=true
             F_DS=true;     F_NTSYNC=true;  F_PTRACE=true; F_UNICODE=true
-            F_BPF=true;    F_PERF=false
+            F_BPF=true;    F_PERF=true
           else
             F_SUSFS="${{ inputs.use_susfs }}";   F_NOMOUNT="${{ inputs.use_nomount }}"
             F_BBG="${{ inputs.use_bbg }}";        F_NET="${{ inputs.use_net }}"
@@ -2073,7 +2072,7 @@ jobs:
           USE_PTRACE: ${{ inputs.use_ptrace || (github.event_name == 'schedule' && true) || false }}
           USE_UNICODE: ${{ inputs.use_unicode || (github.event_name == 'schedule' && true) || false }}
           USE_BPF: ${{ inputs.use_bpf || (github.event_name == 'schedule' && true) || false }}
-          USE_PERF: ${{ inputs.use_perf || false }}
+          USE_PERF: ${{ inputs.use_perf || (github.event_name == 'schedule' && true) || false }}
           USE_CACHE: ${{ inputs.use_cache || (github.event_name == 'schedule' && true) || false }}
           PAGE_SIZE: ${{ inputs.page_size || '4k' }}
           KERNEL_BUILD_VERSION: ${{ inputs.kernel_build_version || 'All' }}
