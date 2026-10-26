@@ -235,9 +235,8 @@ jobs:
           }
 
           # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
-          # NoMount: dev tip (2026-10-20, "kernel: use store_release for
-          # d_flags in nm_hijack_dentry_ops"; module-side only, no kernel contract).
-          PIN_NOMOUNT="e240bb031820fd3f7de5dadb007281b33bb70634"
+          # NoMount: v2.2.0 release tip (2026-10-25, "release v2.2.0").
+          PIN_NOMOUNT="bf1847f98fed382369c43bfd652cd93774b9b8e3"
           # KernelSU: official main tip (46636100, 2026-10-20,
           # "manager: remove DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION (#3927)").
           # The susfs patch (10_enable_susfs_for_ksu) was verified to apply at
