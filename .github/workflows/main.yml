@@ -73,6 +73,7 @@ on:
           - KernelSU
           - BakaSU
           - SukiSU-Ultra
+          - YukiSU
           - KowSU
           - FinaSU
           - No Root
@@ -252,6 +253,8 @@ jobs:
           # `fake_state` and will fail to link with latest BakaSU; 6.6/6.12 are
           # unaffected. Watch those 5 families for build failures.
           PIN_BAKASU="dac2d186406a0d2b0ce3c67cad5a1fa1adbf9f4d"
+          # YukiSU: main branch tip
+          PIN_YUKISU="2bc819a7c66bfd6e6e25ae185f3f98d2dd0b95f6"
           # SukiSU-Ultra: builtin tip (2026-10-21,
           # "kernel: switch sig_fallback hook from weak symbol to static_call");
           # defines fake_state itself, calls the susfs_def.h no_su API -> OK on tips.
@@ -333,16 +336,19 @@ jobs:
             KERNELSU_COMMIT="$(pick "$PIN_KERNELSU" https://github.com/tiann/KernelSU.git refs/heads/main)"
             BAKASU_COMMIT="$(pick "$PIN_BAKASU" https://github.com/Baka-SU/BakaSU.git refs/heads/main)"
             SUKISU_ULTRA_COMMIT="$(pick "$PIN_SUKISU_ULTRA" https://github.com/SukiSU-Ultra/SukiSU-Ultra.git refs/heads/builtin)"
+            YUKISU_COMMIT="$(pick "$PIN_YUKISU" https://github.com/Rouyashiki/YukiSU.git refs/heads/main)"
             FINASU_COMMIT="$(pick "$PIN_FINASU" https://github.com/LyraVoid/FinaSU.git refs/heads/master)"
           else
             KERNELSU_COMMIT="$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
             BAKASU_COMMIT="$(resolve_sha https://github.com/Baka-SU/BakaSU.git refs/heads/main)"
             SUKISU_ULTRA_COMMIT="$(resolve_sha https://github.com/SukiSU-Ultra/SukiSU-Ultra.git refs/heads/main)"
+            YUKISU_COMMIT="$(resolve_sha https://github.com/Rouyashiki/YukiSU.git refs/heads/main)"
             FINASU_COMMIT="$(resolve_sha https://github.com/LyraVoid/FinaSU.git refs/heads/master)"
           fi
           emit ksu_commit "$KERNELSU_COMMIT"
           emit bakasu_commit "$BAKASU_COMMIT"
           emit sukisu_ultra_commit "$SUKISU_ULTRA_COMMIT"
+          emit yukisu_commit "$YUKISU_COMMIT"
           # FinaSU ships susfs kernel-side and hard-depends on it (unguarded
           # linux/susfs.h includes), so it is only valid with SUSFS on;
           # susfs-off finasu builds are rejected in build.yml.
@@ -385,6 +391,15 @@ jobs:
               echo "root_flavor=sukisu-ultra" >> "$GITHUB_OUTPUT"
               emit root_commit "$SUKISU_ULTRA_COMMIT"
               ROOT_MATRIX="[$(mk_entry sukisu-ultra SukiSU-Ultra "$SUKISU_ULTRA_COMMIT" true)]"
+              ;;
+            YukiSU)
+              if [ "${{ inputs.use_susfs }}" = "true" ]; then
+                echo "ERROR: YukiSU includes Kasumi and does not support SUSFS ? re-run with SUSFS off." >&2
+                exit 1
+              fi
+              echo "root_flavor=yukisu" >> "$GITHUB_OUTPUT"
+              emit root_commit "$YUKISU_COMMIT"
+              ROOT_MATRIX="[$(mk_entry yukisu YukiSU "$YUKISU_COMMIT" true)]"
               ;;
             FinaSU)
               if [ "${{ inputs.use_susfs }}" = "false" ]; then
@@ -548,6 +563,11 @@ jobs:
                 printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager,Spoofed-Manager"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
+              yukisu)
+                owner="Rouyashiki"; repo="YukiSU"
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"release","run_id":0,"stock":"","want":""}' \
+                  "$flavor" "$owner" "$repo"
+                ;;
               finasu)
                 owner="LyraVoid"; repo="FinaSU"; wf="build-manager.yml"
                 stock="${{ steps.resolve.outputs.finasu_commit }}"
@@ -603,6 +623,7 @@ jobs:
             KernelSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one kernelsu)") ;;
             BakaSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one bakasu)") ;;
             SukiSU-Ultra) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one sukisu-ultra)") ;;
+            YukiSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one yukisu)") ;;
             KowSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one kowsu)") ;;
             FinaSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one finasu)") ;;
             *) echo "Skipping manager resolution (no root flavor / none)." ;;
@@ -2123,6 +2144,7 @@ jobs:
           sukisu_ultra_commit=env("SUKISU_ULTRA_COMMIT","")
           finasu_commit=env("FINASU_COMMIT","")
           kowsu_commit=env("KOWSU_COMMIT","")
+          yukisu_commit=env("YUKISU_COMMIT","")
           kernelsu_commit=env("KERNELSU_COMMIT","")
           nm=env("NOMOUNT_COMMIT","")
           kp=env("KERNEL_PATCHES_COMMIT","")
@@ -2135,12 +2157,12 @@ jobs:
               _next_url="https://github.com/pershoot/KernelSU-Next/commit/"
           else:
               _next_url="https://github.com/KernelSU-Next/KernelSU-Next/commit/"
-          _root_urls={"next":_next_url,"kernelsu":"https://github.com/tiann/KernelSU/commit/","bakasu":"https://github.com/Baka-SU/BakaSU/commit/","sukisu-ultra":"https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/","finasu":"https://github.com/LyraVoid/FinaSU/commit/","kowsu":"https://github.com/KOWX712/KernelSU/commit/"}
-          _root_commits={"next":_rmatrix.get("next","") or kernelsu_commit,"kernelsu":_rmatrix.get("kernelsu","") or ksu_commit,"bakasu":_rmatrix.get("bakasu","") or bakasu_commit,"sukisu-ultra":_rmatrix.get("sukisu-ultra","") or sukisu_ultra_commit,"finasu":_rmatrix.get("finasu","") or finasu_commit,"kowsu":_rmatrix.get("kowsu","") or kowsu_commit}
+          _root_urls={"next":_next_url,"kernelsu":"https://github.com/tiann/KernelSU/commit/","bakasu":"https://github.com/Baka-SU/BakaSU/commit/","sukisu-ultra":"https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/","finasu":"https://github.com/LyraVoid/FinaSU/commit/","kowsu":"https://github.com/KOWX712/KernelSU/commit/","yukisu":"https://github.com/Rouyashiki/YukiSU/commit/"}
+          _root_commits={"next":_rmatrix.get("next","") or kernelsu_commit,"kernelsu":_rmatrix.get("kernelsu","") or ksu_commit,"bakasu":_rmatrix.get("bakasu","") or bakasu_commit,"sukisu-ultra":_rmatrix.get("sukisu-ultra","") or sukisu_ultra_commit,"finasu":_rmatrix.get("finasu","") or finasu_commit,"kowsu":_rmatrix.get("kowsu","") or kowsu_commit,"yukisu":_rmatrix.get("yukisu","") or yukisu_commit}
           _flavors0=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
           if not _flavors0:
-              _flavors0={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"BakaSU":["bakasu"],"SukiSU-Ultra":["sukisu-ultra"],"FinaSU":["finasu"],"KowSU":["kowsu"],"No Root":[],"All":["next","kernelsu","bakasu"]}.get(root,["next","kernelsu","bakasu"])
-          _labels0={"next":"KernelSU-Next","kernelsu":"KernelSU","bakasu":"BakaSU","sukisu-ultra":"SukiSU-Ultra","finasu":"FinaSU","kowsu":"KowSU"}
+              _flavors0={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"BakaSU":["bakasu"],"SukiSU-Ultra":["sukisu-ultra"],"YukiSU":["yukisu"],"FinaSU":["finasu"],"KowSU":["kowsu"],"No Root":[],"All":["next","kernelsu","bakasu"]}.get(root,["next","kernelsu","bakasu"])
+          _labels0={"next":"KernelSU-Next","kernelsu":"KernelSU","bakasu":"BakaSU","sukisu-ultra":"SukiSU-Ultra","yukisu":"YukiSU","finasu":"FinaSU","kowsu":"KowSU"}
           _rc=[]
           for _fl0 in _flavors0:
               _c=_root_commits.get(_fl0,"")
@@ -2179,8 +2201,8 @@ jobs:
           sus_map_sukisu_ultra={"android12-5.10":env("SUSFS_ANDROID12_5_10_SUKISU_ULTRA",""),"android13-5.10":env("SUSFS_ANDROID13_5_10_SUKISU_ULTRA",""),"android13-5.15":env("SUSFS_ANDROID13_5_15_SUKISU_ULTRA",""),"android14-5.15":env("SUSFS_ANDROID14_5_15_SUKISU_ULTRA",""),"android14-6.1":env("SUSFS_ANDROID14_6_1_SUKISU_ULTRA",""),"android15-6.6":env("SUSFS_ANDROID15_6_6_SUKISU_ULTRA",""),"android16-6.12":env("SUSFS_ANDROID16_6_12_SUKISU_ULTRA","")}
           _flavors=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
           if not _flavors:
-              _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"BakaSU":["bakasu"],"SukiSU-Ultra":["sukisu-ultra"],"KowSU":["kowsu"],"No Root":[],"All":["next","kernelsu","bakasu"]}.get(root,["next","kernelsu","bakasu"])
-          _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","bakasu":"BakaSU","sukisu-ultra":"SukiSU-Ultra","kowsu":"KowSU"}
+              _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"BakaSU":["bakasu"],"SukiSU-Ultra":["sukisu-ultra"],"YukiSU":["yukisu"],"KowSU":["kowsu"],"No Root":[],"All":["next","kernelsu","bakasu"]}.get(root,["next","kernelsu","bakasu"])
+          _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","bakasu":"BakaSU","sukisu-ultra":"SukiSU-Ultra","yukisu":"YukiSU","kowsu":"KowSU"}
           _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
           lines.append("| SUSFS branch |" + "".join(f" {_labels.get(_fl,_fl)} |" for _fl in _flavors))
           lines.append("|---" * (len(_flavors) + 1) + "|")
@@ -2188,7 +2210,7 @@ jobs:
               _row=f"| gki-{v} |"
               for _fl in _flavors:
                   # KowSU never ships SUSFS: render n/a rather than shared pins.
-                  _sm={} if _fl=="kowsu" else (sus_map_sukisu_ultra if _fl=="sukisu-ultra" else (sus_map_bakasu if _fl=="bakasu" else sus_map))
+                  _sm={} if _fl in ("kowsu", "yukisu") else (sus_map_sukisu_ultra if _fl=="sukisu-ultra" else (sus_map_bakasu if _fl=="bakasu" else sus_map))
                   sha=_sm.get(v,"")
                   sha_s=f"[`{sha[:7]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
                   _row+=f" {sha_s} |"
