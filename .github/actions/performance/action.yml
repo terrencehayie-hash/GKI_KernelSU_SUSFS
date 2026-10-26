@@ -1,5 +1,5 @@
 name: 'Apply Performance Patches & Configs'
-description: 'Apply experimental performance kernel patches and config options (ZRAM ZSTD, Kyber I/O)'
+description: 'Apply experimental performance kernel patches and config options (ZRAM ZSTD, Kyber I/O, TCP Fast Open, quiet loglevel)'
 inputs:
   kernel_version:
     description: 'Kernel version (e.g., 6.1)'
@@ -83,3 +83,6 @@ runs:
           CONFIG_ZRAM_DEF_COMP="zstd"
           CONFIG_ZRAM_WRITEBACK=y
           CONFIG_MQ_IOSCHED_KYBER=y
+          CONFIG_TCP_FASTOPEN=y
+          CONFIG_CONSOLE_LOGLEVEL_DEFAULT=4
+          CONFIG_F2FS_CHECK_FS=n

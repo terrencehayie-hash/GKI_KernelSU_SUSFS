@@ -116,7 +116,7 @@ on:
         type: boolean
         default: true
       use_perf:
-        description: "Performance (ARM64 mem/cache patches, ZRAM ZSTD, Kyber I/O)"
+        description: "Performance (ARM64 mem/cache patches, ZRAM ZSTD, Kyber I/O, TCP Fast Open)"
         type: boolean
         default: true
       test_release_notes:
