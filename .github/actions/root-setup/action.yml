@@ -2,7 +2,7 @@ name: Setup pinned root implementation
 description: Clone exactly one supported root implementation at a verified commit
 inputs:
   flavor:
-    description: "kernelsu, next, bakasu, finasu, sukisu-ultra, yukisu, or kowsu"
+    description: "kernelsu, next, bakasu, finasu, sukisu-ultra, or kowsu"
     required: true
   commit:
     description: 'Full immutable commit SHA'
@@ -40,11 +40,6 @@ runs:
             directory="SukiSU-Ultra"
             manager="SukiSU-Ultra Manager"
             ;;
-          yukisu)
-            repo="https://github.com/Rouyashiki/YukiSU.git"
-            directory="YukiSU"
-            manager="YukiSU Manager"
-            ;;
           kowsu)
             repo="https://github.com/KOWX712/KernelSU.git"
             directory="KowSU"
@@ -66,7 +61,7 @@ runs:
           exit 2
         fi
 
-        for candidate in KernelSU KernelSU-Next BakaSU FinaSU SukiSU-Ultra KowSU YukiSU; do
+        for candidate in KernelSU KernelSU-Next BakaSU FinaSU SukiSU-Ultra KowSU; do
           if [ "$candidate" != "$directory" ] && [ -e "$candidate" ]; then
             echo "Refusing mixed root implementations: found $candidate." >&2
             exit 1
@@ -184,18 +179,4 @@ runs:
           echo "No susfs_compat gate present; nothing to do"
         fi
 
-    - name: Allow built-in configuration for YukiSU
-      if: inputs.flavor == 'yukisu'
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        # YukiSU Kconfig defaults to 'depends on m', strip it to allow CONFIG_KSU=y in GKI builds
-        if [ -f "YukiSU/kernel/Kconfig" ]; then
-          sed -i '/depends on m/d' YukiSU/kernel/Kconfig
-          echo "Stripped 'depends on m' from YukiSU/kernel/Kconfig for GKI built-in compatibility."
-        fi
-        # Guard THIS_MODULE against NULL pointer dereference in built-in mode (=y)
-        if [ -f "YukiSU/kernel/core/init.c" ]; then
-          sed -i 's/kobject_del(&THIS_MODULE->mkobj.kobj);/if (THIS_MODULE) kobject_del(\&THIS_MODULE->mkobj.kobj);/' YukiSU/kernel/core/init.c
-          echo "Guarded THIS_MODULE kobject_del in YukiSU/kernel/core/init.c for built-in compatibility."
-        fi
+
