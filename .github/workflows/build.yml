@@ -227,6 +227,13 @@ jobs:
           echo "ERROR: KowSU does not work together with SUSFS — re-run with SUSFS off." >&2
           exit 1
 
+      - name: Reject YukiSU with SUSFS
+        if: inputs.root_flavor == 'yukisu' && (contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'All')
+        shell: bash
+        run: |
+          echo "ERROR: YukiSU includes Kasumi and does not work together with SUSFS — re-run with SUSFS off." >&2
+          exit 1
+
       - name: Reject FinaSU without SUSFS
         # FinaSU's kernel hard-depends on the susfs headers and its supercall
         # dispatch references susfs symbols unguarded, so a susfs-less build
@@ -646,12 +653,20 @@ jobs:
           ROOT_MANAGER="${ROOT_MANAGER:-KernelSU-Next Manager}"
           ROOT_VERSION="${ROOT_VERSION:-${KSU_TAG}}"
           ROOT_SHA="${ROOT_COMMIT:-${KSU_COMMIT:-N/A}}"
+          SUSFS_ENABLED="false"
+          if [ "${{ contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'All' }}" = "true" ]; then
+            SUSFS_ENABLED="true"
+          fi
           if [ "$NOMOUNT_ENABLED" = "true" ]; then
             NOMOUNT_SHA="${NOMOUNT_COMMIT:-${{ inputs.nomount_commit }}}"
           else
             NOMOUNT_SHA="N/A"
           fi
-          SUSFS_SHA="${SUSFS_COMMIT:-${{ inputs.susfs_commit }}}"
+          if [ "$SUSFS_ENABLED" = "true" ]; then
+            SUSFS_SHA="${SUSFS_COMMIT:-${{ inputs.susfs_commit }}}"
+          else
+            SUSFS_SHA="N/A"
+          fi
 
           # Get SUSFS version from susfs.h if available
           SUSFS_VER="N/A"
@@ -708,6 +723,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          SUSFS_ENABLED="false"
+          if [ "${{ contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'All' }}" = "true" ]; then
+            SUSFS_ENABLED="true"
+          fi
+
           # NoMount is optional: only resolve its artifact when requested.
           # (nomount_commit input is always populated, so feature_set is the
           # only reliable signal for whether NoMount was integrated.)
@@ -716,11 +736,17 @@ jobs:
             NOMOUNT_ENABLED="true"
           fi
 
-          if [ "$NOMOUNT_ENABLED" = "true" ]; then
+          if [ "$SUSFS_ENABLED" = "true" ] && [ "$NOMOUNT_ENABLED" = "true" ]; then
             METHOD="GKI source build with SHA-pinned root implementation, SUSFS, and NoMount"
             NOMOUNT_MODULE_COMMIT="${{ inputs.nomount_commit }}"
-          else
+          elif [ "$SUSFS_ENABLED" = "true" ]; then
             METHOD="GKI source build with SHA-pinned root implementation and SUSFS"
+            NOMOUNT_MODULE_COMMIT="N/A"
+          elif [ "$NOMOUNT_ENABLED" = "true" ]; then
+            METHOD="GKI source build with SHA-pinned root implementation and NoMount"
+            NOMOUNT_MODULE_COMMIT="${{ inputs.nomount_commit }}"
+          else
+            METHOD="GKI source build with SHA-pinned root implementation"
             NOMOUNT_MODULE_COMMIT="N/A"
           fi
 
@@ -852,7 +878,6 @@ jobs:
             .status == "Build-verified only" and
             (.root.manager | length > 0) and
             (.root.version | length > 0) and
-            (.susfs_revision | test("^[0-9a-f]{40}$")) and
             (.kernel_source_commit | test("^[0-9a-f]{40}$")) and
             (.artifact_url | startswith("https://")) and
             (.sha256 | test("^sha256:[0-9a-f]{64}$")) and
@@ -861,6 +886,15 @@ jobs:
             .catalog.flashability == "not-guaranteed" and
             .catalog.boot == "not-guaranteed"
           ' "$metadata_file" > /dev/null
+          if [ "$SUSFS_ENABLED" = "true" ]; then
+            jq -e '
+              (.susfs_revision | test("^[0-9a-f]{40}$"))
+            ' "$metadata_file" > /dev/null
+          else
+            jq -e '
+              (.susfs_revision == "N/A")
+            ' "$metadata_file" > /dev/null
+          fi
           if [ "$NOMOUNT_ENABLED" = "true" ]; then
             jq -e '
               (.nomount_commit | test("^[0-9a-f]{40}$")) and
