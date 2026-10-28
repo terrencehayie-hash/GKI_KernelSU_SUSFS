@@ -38,9 +38,10 @@ runs:
           #patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
           patch -p1 < ${{ github.action_path }}/patches/0001-net-tcp-backport-BBRv3-to-android14-5.15.patch
         elif [[ ${{ inputs.version }} == "android13-5.15" ]]; then
-          patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
+          python3 -c "p = 'net/ipv4/sysctl_net_ipv4.c'; open(p, 'w').write(open(p).read().replace('static int tcp_min_rcvbuf = 4096;\n\n', '').replace('static u32 u32_max_div_HZ = UINT_MAX / HZ;', 'static int tcp_min_rcvbuf = 4096;\nstatic u32 u32_max_div_HZ = UINT_MAX / HZ;')) if 'static int tcp_min_rcvbuf = 4096;\n\n' in open(p).read() else None"
+          patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
           if [[ ${{ inputs.sublevel }} -le "43" ]]; then
-            patch -p1 < ${{ github.action_path }}/patches/0002-net-tcp-add-tcp_snd_cwnd-and-tcp_snd_cwnd_set-helper-functions.patch
+            patch -p1 -F3 --forward < ${{ github.action_path }}/patches/0002-net-tcp-add-tcp_snd_cwnd-and-tcp_snd_cwnd_set-helper-functions.patch
           fi
         elif [[ ${{ inputs.version }} == "android13-5.10" ]]; then
           patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android12-5.10.patch"
