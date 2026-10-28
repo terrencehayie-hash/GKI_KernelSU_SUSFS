@@ -22,20 +22,34 @@ def patch_zram_file(path: str) -> bool:
     patched = False
 
     # 1. Enforce ZSTD compression algorithm against vendor downgrades
-    pattern_comp = r'(static\s+ssize_t\s+comp_algorithm_store\s*\([^)]+\)\s*\{[\s\S]*?struct\s+zram\s*\*zram\s*=\s*dev_to_zram\(dev\);)'
-    if re.search(pattern_comp, content):
-        if 'buf = "zstd";' not in content:
+    # Must be placed AFTER all local variable declarations to avoid C89 -Wdeclaration-after-statement
+    pattern_comp = r"(static\s+ssize_t\s+comp_algorithm_store\s*\([^)]+\)\s*\{[\s\S]*?size_t\s+sz;)"
+    pattern_comp_alt = r"(\bstr[ls]cpy\s*\(\s*compressor,\s*buf)"
+
+    if 'buf = "zstd";' not in content:
+        if re.search(pattern_comp, content):
             replacement = (
-                r'\1\n'
-                r'#if defined(CONFIG_ZRAM_DEF_COMP_ZSTD) || IS_ENABLED(CONFIG_ZRAM_DEF_COMP_ZSTD)\n'
+                r"\1\n"
+                r"#if defined(CONFIG_ZRAM_DEF_COMP_ZSTD) || IS_ENABLED(CONFIG_ZRAM_DEF_COMP_ZSTD)\n"
                 r'\tbuf = "zstd";\n'
-                r'#endif'
+                r"#endif"
             )
             content = re.sub(pattern_comp, replacement, content, count=1)
-            print(f"[+] Enforced ZSTD in {path}")
+            print(f"[+] Enforced ZSTD in {path} (after declarations)")
+            patched = True
+        elif re.search(pattern_comp_alt, content):
+            replacement = (
+                r"#if defined(CONFIG_ZRAM_DEF_COMP_ZSTD) || IS_ENABLED(CONFIG_ZRAM_DEF_COMP_ZSTD)\n"
+                r'\tbuf = "zstd";\n'
+                r"#endif\n\t\1"
+            )
+            content = re.sub(pattern_comp_alt, replacement, content, count=1)
+            print(f"[+] Enforced ZSTD in {path} (before strlcpy)")
             patched = True
         else:
-            print(f"[*] ZSTD already enforced in {path}")
+            print(f"[!] Warning: comp_algorithm_store pattern not matched in {path}", file=sys.stderr)
+    else:
+        print(f"[*] ZSTD already enforced in {path}")
 
     # 2. Enforce minimum 4GB disksize (4294967296 bytes)
     pattern_disk = r'(static\s+ssize_t\s+disksize_store\s*\([^)]+\)\s*\{[\s\S]*?disksize\s*=\s*memparse\(buf,\s*&end\);)'
