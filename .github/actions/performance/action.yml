@@ -86,35 +86,11 @@ runs:
           CONFIG_TCP_FASTOPEN=y
           CONFIG_CONSOLE_LOGLEVEL_DEFAULT=4
           CONFIG_F2FS_CHECK_FS=n
-    - name: Enforce ZRAM ZSTD in Kernel Driver
+    - name: Enforce ZRAM 4GB and ZSTD in Kernel Driver
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
-        echo "Patching zram driver to enforce ZSTD compression against vendor init overrides..."
-        PATCHED=0
-        for f in common/drivers/block/zram/zram_drv.c drivers/block/zram/zram_drv.c; do
-          if [ -f "$f" ]; then
-            python3 -c "
-import re, sys
-path = '$f'
-with open(path, 'r', encoding='utf-8', errors='ignore') as fp:
-    c = fp.read()
-pattern = r'(static\s+ssize_t\s+comp_algorithm_store\s*\([^)]+\)\s*\{[\s\S]*?struct\s+zram\s*\*zram\s*=\s*dev_to_zram\(dev\);)'
-if re.search(pattern, c):
-    c = re.sub(pattern, r'\1\n#if defined(CONFIG_ZRAM_DEF_COMP_ZSTD) || IS_ENABLED(CONFIG_ZRAM_DEF_COMP_ZSTD)\n\tbuf = \"zstd\";\n#endif', c, count=1)
-    with open(path, 'w', encoding='utf-8') as fp:
-        fp.write(c)
-    print(f'Successfully enforced ZSTD in {path}')
-else:
-    print(f'ERROR: comp_algorithm_store pattern not matched in {path}', file=sys.stderr)
-    sys.exit(1)
-"
-            PATCHED=1
-          fi
-        done
-        if [ "$PATCHED" -eq 0 ]; then
-          echo "ERROR: Could not find zram_drv.c under common/drivers/block/zram/ or drivers/block/zram/" >&2
-          exit 1
-        fi
+        echo "Patching zram driver to enforce 4GB disksize and ZSTD compression..."
+        python3 "${{ github.workspace }}/.github/scripts/patch_zram.py"
 
