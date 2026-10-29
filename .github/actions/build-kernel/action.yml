@@ -56,11 +56,6 @@ runs:
       run: |
         PAGE_SIZE="${{ inputs.page_size }}"
         sed -i 's/check_defconfig//' ./common/build.config.gki
-        # When ZRAM/zsmalloc are compiled built-in (=y), no .ko modules are produced in modules.order.
-        # Clear MODULES_ORDER and update GKI module lists to avoid build.sh diff assertions.
-        sed -i '/MODULES_ORDER/d' ./common/build.config* 2>/dev/null || true
-        sed -i '/MODULES_ORDER/d' ./build.config* 2>/dev/null || true
-        find . -name "*gki*modules*" -exec sed -i '/zsmalloc/d; /zram/d' {} + 2>/dev/null || true
         if [ -f "build/build.sh" ]; then
           if [ "$PAGE_SIZE" != "4k" ]; then
             echo "ERROR: page_size=${PAGE_SIZE} is only supported by the Kleaf (Bazel) build; this tree uses build/build.sh." >&2
@@ -79,7 +74,6 @@ runs:
           CXX="/usr/bin/ccache clang++" \
           HOSTCC="/usr/bin/ccache clang" \
           HOSTCXX="/usr/bin/ccache clang++" \
-          MODULES_ORDER="" \
           build/build.sh -j"$(nproc)"
         else
           sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
