@@ -13,6 +13,8 @@ EXEC_FILES = [
 ]
 
 THERMAL_FILES = [
+    "common/drivers/thermal/gov_step_wise.c",
+    "drivers/thermal/gov_step_wise.c",
     "common/drivers/thermal/step_wise.c",
     "drivers/thermal/step_wise.c"
 ]
@@ -103,14 +105,17 @@ def main():
 
     if not thermal_patched:
         for root, _, files in os.walk("."):
-            if "step_wise.c" in files:
-                full_path = os.path.join(root, "step_wise.c")
-                if patch_thermal_file(full_path):
-                    thermal_patched = True
-                    break
+            for fname in ["gov_step_wise.c", "step_wise.c"]:
+                if fname in files:
+                    full_path = os.path.join(root, fname)
+                    if patch_thermal_file(full_path):
+                        thermal_patched = True
+                        break
+            if thermal_patched:
+                break
 
     if not thermal_patched:
-        print("ERROR: Could not locate drivers/thermal/step_wise.c to patch", file=sys.stderr)
+        print("ERROR: Could not locate drivers/thermal/gov_step_wise.c to patch", file=sys.stderr)
         sys.exit(1)
 
     print("[+] Kernel thermal optimization successfully applied!")

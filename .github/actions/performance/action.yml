@@ -76,6 +76,8 @@ runs:
       uses: ./.github/actions/set-kernel-config
       with:
         config_list: |
+          CONFIG_ZRAM=y
+          CONFIG_ZSMALLOC=y
           CONFIG_CRYPTO_ZSTD=y
           CONFIG_ZSTD_COMPRESS=y
           CONFIG_ZSTD_DECOMPRESS=y
