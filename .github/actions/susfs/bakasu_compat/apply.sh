@@ -31,6 +31,13 @@ BAKASU_KBUILD="$BAKASU_KSU/Kbuild"
   exit 1
 }
 
+# If BakaSU already includes preinit or has native SUSFS integration (e.g. commit d5e9e025+),
+# skip generating redundant stubs to prevent duplicate symbol linker errors.
+if [ -f "$BAKASU_KSU/preinit/preinit.c" ] && grep -q "ksu_setup_preinit_file" "$BAKASU_KSU/preinit/preinit.c"; then
+  echo "BakaSU natively provides module preinit and SUSFS symbols; skipping compat stubs."
+  exit 0
+fi
+
 # compat.c: defines all SUSFS-expected symbols that BakaSU lacks
 cat > "$BAKASU_KSU/bakasu_susfs_compat.c" <<'COMPAT'
 /* BakaSU SUSFS compat: global symbol definitions for SUSFS patch extern refs.
