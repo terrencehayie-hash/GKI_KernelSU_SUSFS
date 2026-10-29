@@ -95,6 +95,10 @@ runs:
         set -euo pipefail
         echo "Patching zram driver to enforce 4GB disksize and ZSTD compression..."
         python3 "${{ github.workspace }}/.github/scripts/patch_zram.py"
+        echo "Removing zram and zsmalloc from GKI module manifests..."
+        find . -name "*gki*modules*" -exec sed -i '/zsmalloc/d; /zram/d' {} + 2>/dev/null || true
+        sed -i '/MODULES_ORDER/d' ./common/build.config* 2>/dev/null || true
+        sed -i '/MODULES_ORDER/d' ./build.config* 2>/dev/null || true
     - name: Neutralize mi_thermald and Enforce In-Kernel Thermal Management
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
