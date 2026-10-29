@@ -93,4 +93,10 @@ runs:
         set -euo pipefail
         echo "Patching zram driver to enforce 4GB disksize and ZSTD compression..."
         python3 "${{ github.workspace }}/.github/scripts/patch_zram.py"
-
+    - name: Neutralize mi_thermald and Enforce In-Kernel Thermal Management
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        set -euo pipefail
+        echo "Patching kernel to block mi_thermald and protect display from thermal throttling..."
+        python3 "${{ github.workspace }}/.github/scripts/patch_thermal.py"
